@@ -15,12 +15,9 @@
         /// <returns>A Pivot Table of the queried data.</returns>
         public DataTable CreatePivot(IDataReader reader, IList<ColumnConfiguration> configuration) {
             var watch = Stopwatch.StartNew();
-            var data = FetchData(reader);
+            var columnDefinitions = new List<ColumnDefinition>();
+            var data = FetchData(reader, configuration, columnDefinitions);
             Console.WriteLine("FetchData: {0}", watch.ElapsedMilliseconds);
-            watch.Reset();
-            watch.Start();
-            var columnDefinitions = GetColumns(data, configuration);
-            Console.WriteLine("GetColumns: {0}", watch.ElapsedMilliseconds);
             watch.Reset();
             watch.Start();
             var returnTable = CreateTableDefinition(columnDefinitions);
@@ -42,12 +39,21 @@
         /// Queries data from IDataReader and returns all data converted into a List of DataObject
         /// </summary>
         /// <param name="reader">The IDataReader from which the data is read.</param>
+        /// <param name="configuration">The configuration of all columns that should be contained in Pivot Table.</param>
+        /// <param name="columns">A collection of columns that is filled by this method.</param>
         /// <returns>A List of DataObject that contains each row's data.</returns>
-        private static IList<DataObject> FetchData(IDataReader reader) {
+        private static IList<DataObject> FetchData(IDataReader reader, IList<ColumnConfiguration> configuration, List<ColumnDefinition> columns) {
+            //Add first data column by which all values are grouped by
+            columns.Add(new ColumnDefinition("PARTID", 0, typeof(string)));
+
             var dataObjects = new List<DataObject>();
+
             while (reader.Read()) {
-                dataObjects.Add(new DataObject(reader));
+                var dataObject = new DataObject(reader);
+                dataObjects.Add(dataObject);
+                GetColumns(columns, configuration, dataObject);
             }
+
             return dataObjects;
         }
 
@@ -56,22 +62,14 @@
         /// </summary>
         /// <param name="data">All rows that were returned from database.</param>
         /// <param name="configuration">The definition in which order and what columns to return.</param>
+        /// <param name="dataEntry">The entry that is used to create additional columns.</param>
         /// <returns>A List of column definitions.</returns>
-        private List<ColumnDefinition> GetColumns(IEnumerable<DataObject> data, IList<ColumnConfiguration> configuration) {
-            var columns = new List<ColumnDefinition>();
-
-            //Add first data column by which all values are grouped by
-            columns.Add(new ColumnDefinition("PARTID", 0, typeof(string)));
-
-            foreach (var dataEntry in data) {
-                foreach (var configurationEntry in configuration) {
-                    if (!columns.Any(c => c.DisplayName == configurationEntry.DisplayName) && configurationEntry.Name == dataEntry.ValueId) {
-                        columns.Add(new ColumnDefinition(configurationEntry.DisplayName, configurationEntry.SortOrder, configurationEntry.DataType));
-                    }
+        private static void GetColumns(IList<ColumnDefinition> columns, IList<ColumnConfiguration> configuration, DataObject dataEntry) {
+            foreach (var configurationEntry in configuration) {
+                if (!columns.Any(c => c.DisplayName == configurationEntry.DisplayName) && configurationEntry.Name == dataEntry.ValueId) {
+                    columns.Add(new ColumnDefinition(configurationEntry.DisplayName, configurationEntry.SortOrder, configurationEntry.DataType));
                 }
             }
-
-            return columns;
         }
 
         /// <summary>
