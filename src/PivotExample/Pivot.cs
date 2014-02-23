@@ -1,6 +1,8 @@
 ﻿namespace PivotExample {
+    using System;
     using System.Collections.Generic;
     using System.Data;
+    using System.Diagnostics;
     using System.Linq;
 
     public class Pivot : IPivot {
@@ -12,16 +14,30 @@
         /// <param name="configuration">This parameter defines which data should be used, in which order it should be displayed and the columns display names.</param>
         /// <returns>A Pivot Table of the queried data.</returns>
         public DataTable CreatePivot(IDataReader reader, IList<ColumnConfiguration> configuration) {
+            var watch = Stopwatch.StartNew();
             var data = FetchData(reader);
+            Console.WriteLine("FetchData: {0}", watch.ElapsedMilliseconds);
+            watch.Reset();
+            watch.Start();
             var columnDefinitions = GetColumns(data, configuration);
+            Console.WriteLine("GetColumns: {0}", watch.ElapsedMilliseconds);
+            watch.Reset();
+            watch.Start();
             var returnTable = CreateTableDefinition(columnDefinitions);
+            Console.WriteLine("CreateTableDefinition: {0}", watch.ElapsedMilliseconds);
+            watch.Reset();
+            watch.Start();
 
             CalculatePivot(returnTable, data, configuration);
+            Console.WriteLine("CalculatePivot: {0}", watch.ElapsedMilliseconds);
+            watch.Reset();
+            watch.Start();
             CheckForNullValues(returnTable);
+            Console.WriteLine("CheckForNullValues: {0}", watch.ElapsedMilliseconds);
 
             return returnTable;
         }
-        
+
         /// <summary>
         /// Queries data from IDataReader and returns all data converted into a List of DataObject
         /// </summary>

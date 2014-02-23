@@ -32,6 +32,11 @@
             PerformanceTest(100, 100000);
         }
 
+        [TestMethod]
+        public void Optimization() {
+            PerformanceTest(100, 10000);
+        }
+
         /// <summary>
         /// Executes a new performance test using the specified parameters.
         /// </summary>
