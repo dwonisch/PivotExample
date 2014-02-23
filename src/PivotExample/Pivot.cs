@@ -1,5 +1,6 @@
 ﻿namespace PivotExample {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Data;
     using System.Diagnostics;
@@ -15,8 +16,9 @@
         /// <returns>A Pivot Table of the queried data.</returns>
         public DataTable CreatePivot(IDataReader reader, IList<ColumnConfiguration> configuration) {
             var watch = Stopwatch.StartNew();
-            var columnDefinitions = new List<ColumnDefinition>();
-            var data = FetchData(reader, configuration, columnDefinitions);
+            var columnDefinitions = new Dictionary<Tuple<string,string>,ColumnDefinition>();
+            var configurationDictionary = configuration.ToDictionary(c => c.Name);
+            var data = FetchData(reader, configurationDictionary, columnDefinitions);
             Console.WriteLine("FetchData: {0}", watch.ElapsedMilliseconds);
             watch.Reset();
             watch.Start();
@@ -42,9 +44,9 @@
         /// <param name="configuration">The configuration of all columns that should be contained in Pivot Table.</param>
         /// <param name="columns">A collection of columns that is filled by this method.</param>
         /// <returns>A List of DataObject that contains each row's data.</returns>
-        private static IList<DataObject> FetchData(IDataReader reader, IList<ColumnConfiguration> configuration, List<ColumnDefinition> columns) {
+        private static IList<DataObject> FetchData(IDataReader reader, IDictionary<string, ColumnConfiguration> configuration, IDictionary<Tuple<string,string>, ColumnDefinition> columns) {
             //Add first data column by which all values are grouped by
-            columns.Add(new ColumnDefinition("PARTID", 0, typeof(string)));
+            columns.Add(Tuple.Create("PARTID", "PARTID"), new ColumnDefinition("PARTID", 0, typeof(string)));
 
             var dataObjects = new List<DataObject>();
 
@@ -64,10 +66,13 @@
         /// <param name="configuration">The definition in which order and what columns to return.</param>
         /// <param name="dataEntry">The entry that is used to create additional columns.</param>
         /// <returns>A List of column definitions.</returns>
-        private static void GetColumns(IList<ColumnDefinition> columns, IList<ColumnConfiguration> configuration, DataObject dataEntry) {
-            foreach (var configurationEntry in configuration) {
-                if (!columns.Any(c => c.DisplayName == configurationEntry.DisplayName) && configurationEntry.Name == dataEntry.ValueId) {
-                    columns.Add(new ColumnDefinition(configurationEntry.DisplayName, configurationEntry.SortOrder, configurationEntry.DataType));
+        private static void GetColumns(IDictionary<Tuple<string, string>, ColumnDefinition> columns, IDictionary<string, ColumnConfiguration> configuration, DataObject dataEntry) {
+            if (configuration.ContainsKey(dataEntry.ValueId)) {
+                var configurationEntry = configuration[dataEntry.ValueId];
+                string displayName = configurationEntry.DisplayName;
+                var key = Tuple.Create(dataEntry.ValueId, displayName);
+                if (!columns.ContainsKey(key)) {
+                    columns.Add(key, new ColumnDefinition(displayName, configurationEntry.SortOrder, configurationEntry.DataType));
                 }
             }
         }
@@ -77,8 +82,8 @@
         /// </summary>
         /// <param name="columnDefinitions">For each column definition a DataColumn is added to the returned DataTable.</param>
         /// <returns>A DataTable based on the committed column definitions.</returns>
-        private DataTable CreateTableDefinition(List<ColumnDefinition> columnDefinitions) {
-            var sortedDefinitions = columnDefinitions.OrderBy(d => d.SortOrder).ToList();
+        private DataTable CreateTableDefinition(IDictionary<Tuple<string, string>, ColumnDefinition> columnDefinitions) {
+            var sortedDefinitions = columnDefinitions.Values.OrderBy(d => d.SortOrder).ToList();
 
             var dataTable = new DataTable();
 
