@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PivotExample", "PivotExample\PivotExample.csproj", "{219521A9-92A8-4795-935B-7E3CAAECD8AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PivotExample.Test", "PivotExample.Test\PivotExample.Test.csproj", "{C61B8C2B-0EF6-417C-8EEE-6207A2255C0D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{219521A9-92A8-4795-935B-7E3CAAECD8AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{219521A9-92A8-4795-935B-7E3CAAECD8AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{219521A9-92A8-4795-935B-7E3CAAECD8AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{219521A9-92A8-4795-935B-7E3CAAECD8AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C61B8C2B-0EF6-417C-8EEE-6207A2255C0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C61B8C2B-0EF6-417C-8EEE-6207A2255C0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C61B8C2B-0EF6-417C-8EEE-6207A2255C0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C61B8C2B-0EF6-417C-8EEE-6207A2255C0D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
