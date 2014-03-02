@@ -105,16 +105,12 @@
             }
 
             string columnName = dataEntry.ValueId;
-            foreach (var configurationEntry in configuration.Where(c => columnName.Equals(c.Key))) {
-                columnName = configurationEntry.Value.DisplayName;
-                break;
-            }
 
-            foreach (DataColumn column in returnTable.Columns) {
-                if (column.ColumnName == columnName) {
-                    row[columnName] = dataEntry.Value;
-                }
-            }
+            if (configuration.ContainsKey(columnName))
+                columnName = configuration[columnName].DisplayName;
+
+            if (returnTable.Columns.Contains(columnName))
+                row[columnName] = dataEntry.Value;
         }
 
         /// <summary>
