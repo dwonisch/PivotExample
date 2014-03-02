@@ -96,7 +96,7 @@
         /// <param name="dataEntry">The data that is used to fill the DataTable.</param>
         /// <param name="configuration">The column configuration that was used to create the datatable.</param>
         private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, ColumnConfiguration> configuration) {
-            var row = returnTable.Select(string.Format("PARTID = '{0}'", dataEntry.PartId)).FirstOrDefault();
+            var row = returnTable.Rows.Find(dataEntry.PartId);
 
             if (row == null) {
                 row = returnTable.NewRow();
