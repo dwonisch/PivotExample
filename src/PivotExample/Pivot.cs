@@ -18,9 +18,9 @@
             var watch = Stopwatch.StartNew();
             var returnTable = new DataTable();            
 
-            var columnDefinitions = new Dictionary<Tuple<string,string>,ColumnDefinition>();
+            var columnDefinitions = new Dictionary<Tuple<string,string>,ColumnConfiguration>();
             var configurationDictionary = configuration.ToDictionary(c => c.Name);
-            var data = FetchData(reader, configurationDictionary, columnDefinitions, returnTable);
+            FetchData(reader, configurationDictionary, columnDefinitions, returnTable);
             Console.WriteLine("FetchData: {0}", watch.ElapsedMilliseconds);
 
             watch.Reset();
@@ -39,25 +39,22 @@
         /// <param name="columns">A collection of columns that is filled by this method.</param>
         /// <param name="returnTable">The DataTable where generated columns are added.</param>
         /// <returns>A List of DataObject that contains each row's data.</returns>
-        private static IList<DataObject> FetchData(IDataReader reader, IDictionary<string, ColumnConfiguration> configuration, IDictionary<Tuple<string, string>, ColumnDefinition> columns, DataTable returnTable) {
-            //Add first data column by which all values are grouped by
-            var primaryKeyColumn = new ColumnDefinition("PARTID", 0, typeof(string));
-            columns.Add(Tuple.Create("PARTID", "PARTID"), primaryKeyColumn);
-            CreateTableDefinition(returnTable, primaryKeyColumn);
-
-            var dataObjects = new List<DataObject>();
+        private static void FetchData(IDataReader reader, IDictionary<string, ColumnConfiguration> configuration, IDictionary<Tuple<string, string>, ColumnConfiguration> columns, DataTable returnTable) {
+            IDictionary<string, DataColumn> columnCache = new Dictionary<string, DataColumn>();
             IDictionary<string, DataRow> rowCache = new Dictionary<string, DataRow>();
+            
+            //Add first data column by which all values are grouped by
+            var primaryKeyColumn = new ColumnConfiguration("PARTID", "Part", 0, typeof(string));
+            columns.Add(Tuple.Create("PARTID", "PARTID"), primaryKeyColumn);
+            CreateTableDefinition(returnTable, primaryKeyColumn, columnCache);
 
             while (reader.Read()) {
                 var dataObject = new DataObject(reader);
-                dataObjects.Add(dataObject);
                 var columnDefintion = GetColumns(columns, configuration, dataObject);
                 if (columnDefintion != null)
-                    CreateTableDefinition(returnTable, columnDefintion);
-                CalculatePivot(returnTable, dataObject, configuration, rowCache);
+                    CreateTableDefinition(returnTable, columnDefintion, columnCache);
+                CalculatePivot(returnTable, dataObject, rowCache, columnCache);
             }
-
-            return dataObjects;
         }
 
         /// <summary>
@@ -67,13 +64,13 @@
         /// <param name="configuration">The definition in which order and what columns to return.</param>
         /// <param name="dataEntry">The entry that is used to create additional columns.</param>
         /// <returns>A List of column definitions.</returns>
-        private static ColumnDefinition GetColumns(IDictionary<Tuple<string, string>, ColumnDefinition> columns, IDictionary<string, ColumnConfiguration> configuration, DataObject dataEntry) {
+        private static ColumnConfiguration GetColumns(IDictionary<Tuple<string, string>, ColumnConfiguration> columns, IDictionary<string, ColumnConfiguration> configuration, DataObject dataEntry) {
             if (configuration.ContainsKey(dataEntry.ValueId)) {
                 var configurationEntry = configuration[dataEntry.ValueId];
                 string displayName = configurationEntry.DisplayName;
                 var key = Tuple.Create(dataEntry.ValueId, displayName);
                 if (!columns.ContainsKey(key)) {
-                    columns.Add(key, new ColumnDefinition(displayName, configurationEntry.SortOrder, configurationEntry.DataType));
+                    columns.Add(key, configurationEntry);
                     return columns[key];
                 }
             }
@@ -85,8 +82,11 @@
         /// </summary>
         /// <param name="dataTable">The DataTable where the generated column is added.</param>
         /// <param name="columnDefinition">The information that is used to create the columnDefinition.</param>
-        private static void CreateTableDefinition(DataTable dataTable, ColumnDefinition columnDefinition) {
-            dataTable.Columns.Add(columnDefinition.DisplayName, columnDefinition.DataType);
+        /// <param name="columnCache"></param>
+        private static void CreateTableDefinition(DataTable dataTable, ColumnConfiguration columnDefinition, IDictionary<string, DataColumn> columnCache) {
+            var column = dataTable.Columns.Add(columnDefinition.Name, columnDefinition.DataType);
+            column.Caption = columnDefinition.DisplayName;
+            columnCache.Add(columnDefinition.DisplayName, column);
         }
 
         /// <summary>
@@ -96,7 +96,8 @@
         /// <param name="dataEntry">The data that is used to fill the DataTable.</param>
         /// <param name="configuration">The column configuration that was used to create the datatable.</param>
         /// <param name="dataRowCache">A dictionary that is used to track primary key information.</param>
-        private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, ColumnConfiguration> configuration, IDictionary<string, DataRow> dataRowCache) {
+        /// <param name="columnCache"></param>
+        private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, DataRow> dataRowCache, IDictionary<string, DataColumn> columnCache) {
             DataRow row;
             if (!dataRowCache.ContainsKey(dataEntry.PartId)) {
                 row = returnTable.NewRow();
@@ -109,10 +110,7 @@
 
             string columnName = dataEntry.ValueId;
 
-            if (configuration.ContainsKey(columnName))
-                columnName = configuration[columnName].DisplayName;
-
-            if (returnTable.Columns.Contains(columnName))
+            if (columnCache.ContainsKey(columnName))
                 row[columnName] = dataEntry.Value;
         }
 
