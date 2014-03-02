@@ -22,10 +22,7 @@
             var configurationDictionary = configuration.ToDictionary(c => c.Name);
             var data = FetchData(reader, configurationDictionary, columnDefinitions, returnTable);
             Console.WriteLine("FetchData: {0}", watch.ElapsedMilliseconds);
-            watch.Reset();
-            watch.Start();
-            CalculatePivot(returnTable, data, configuration);
-            Console.WriteLine("CalculatePivot: {0}", watch.ElapsedMilliseconds);
+
             watch.Reset();
             watch.Start();
             CheckForNullValues(returnTable);
@@ -47,6 +44,7 @@
             var primaryKeyColumn = new ColumnDefinition("PARTID", 0, typeof(string));
             columns.Add(Tuple.Create("PARTID", "PARTID"), primaryKeyColumn);
             CreateTableDefinition(returnTable, primaryKeyColumn);
+            returnTable.PrimaryKey = new[] { returnTable.Columns["PARTID"] };
 
             var dataObjects = new List<DataObject>();
 
@@ -56,6 +54,7 @@
                 var columnDefintion = GetColumns(columns, configuration, dataObject);
                 if (columnDefintion != null)
                     CreateTableDefinition(returnTable, columnDefintion);
+                CalculatePivot(returnTable, dataObject, configuration);
             }
 
             return dataObjects;
@@ -94,30 +93,26 @@
         /// Pivoting queried data.
         /// </summary>
         /// <param name="returnTable">The DataTable that should be filled with data.</param>
-        /// <param name="data">The data that is used to fill the DataTable.</param>
+        /// <param name="dataEntry">The data that is used to fill the DataTable.</param>
         /// <param name="configuration">The column configuration that was used to create the datatable.</param>
-        private void CalculatePivot(DataTable returnTable, IList<DataObject> data, IList<ColumnConfiguration> configuration) {
-            returnTable.PrimaryKey = new[] { returnTable.Columns["PARTID"] };
+        private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, ColumnConfiguration> configuration) {
+            var row = returnTable.Select(string.Format("PARTID = '{0}'", dataEntry.PartId)).FirstOrDefault();
 
-            foreach (var dataEntry in data) {
-                var row = returnTable.Select(string.Format("PARTID = '{0}'", dataEntry.PartId)).FirstOrDefault();
+            if (row == null) {
+                row = returnTable.NewRow();
+                row["PARTID"] = dataEntry.PartId;
+                returnTable.Rows.Add(row);
+            }
 
-                if (row == null) {
-                    row = returnTable.NewRow();
-                    row["PARTID"] = dataEntry.PartId;
-                    returnTable.Rows.Add(row);
-                }
+            string columnName = dataEntry.ValueId;
+            foreach (var configurationEntry in configuration.Where(c => columnName.Equals(c.Key))) {
+                columnName = configurationEntry.Value.DisplayName;
+                break;
+            }
 
-                string columnName = dataEntry.ValueId;
-                foreach (var configurationEntry in configuration.Where(c => columnName.Equals(c.Name))) {
-                    columnName = configurationEntry.DisplayName;
-                    break;
-                }
-
-                foreach (DataColumn column in returnTable.Columns) {
-                    if (column.ColumnName == columnName) {
-                        row[columnName] = dataEntry.Value;
-                    }
+            foreach (DataColumn column in returnTable.Columns) {
+                if (column.ColumnName == columnName) {
+                    row[columnName] = dataEntry.Value;
                 }
             }
         }
