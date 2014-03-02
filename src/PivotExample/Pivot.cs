@@ -44,9 +44,9 @@
             var primaryKeyColumn = new ColumnDefinition("PARTID", 0, typeof(string));
             columns.Add(Tuple.Create("PARTID", "PARTID"), primaryKeyColumn);
             CreateTableDefinition(returnTable, primaryKeyColumn);
-            returnTable.PrimaryKey = new[] { returnTable.Columns["PARTID"] };
 
             var dataObjects = new List<DataObject>();
+            IDictionary<string, DataRow> rowCache = new Dictionary<string, DataRow>();
 
             while (reader.Read()) {
                 var dataObject = new DataObject(reader);
@@ -54,7 +54,7 @@
                 var columnDefintion = GetColumns(columns, configuration, dataObject);
                 if (columnDefintion != null)
                     CreateTableDefinition(returnTable, columnDefintion);
-                CalculatePivot(returnTable, dataObject, configuration);
+                CalculatePivot(returnTable, dataObject, configuration, rowCache);
             }
 
             return dataObjects;
@@ -95,13 +95,16 @@
         /// <param name="returnTable">The DataTable that should be filled with data.</param>
         /// <param name="dataEntry">The data that is used to fill the DataTable.</param>
         /// <param name="configuration">The column configuration that was used to create the datatable.</param>
-        private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, ColumnConfiguration> configuration) {
-            var row = returnTable.Rows.Find(dataEntry.PartId);
-
-            if (row == null) {
+        /// <param name="dataRowCache">A dictionary that is used to track primary key information.</param>
+        private static void CalculatePivot(DataTable returnTable, DataObject dataEntry, IDictionary<string, ColumnConfiguration> configuration, IDictionary<string, DataRow> dataRowCache) {
+            DataRow row;
+            if (!dataRowCache.ContainsKey(dataEntry.PartId)) {
                 row = returnTable.NewRow();
                 row["PARTID"] = dataEntry.PartId;
                 returnTable.Rows.Add(row);
+                dataRowCache.Add(dataEntry.PartId, row);
+            } else {
+                row = dataRowCache[dataEntry.PartId];
             }
 
             string columnName = dataEntry.ValueId;
